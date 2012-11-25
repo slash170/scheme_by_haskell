@@ -4,15 +4,19 @@ module Main where
 
 import System.IO()
 import System.Environment
-import Numeric
 import Control.Monad()
 import Text.ParserCombinators.Parsec hiding (spaces)
+import Numeric
+import Data.Ratio
+-- import Data.Complex
 
 data LispVal = Atom       String
              | List       [LispVal]
              | DottedList [LispVal] LispVal
              | Number     Integer
              | Float      Double
+--           | Complex    (Complex Double)
+             | Ratio      Rational
              | String     String
              | Bool       Bool
              | Character  Char
@@ -35,6 +39,8 @@ parseExpr = parseAtom
             <|> try parseBool
             <|> try parseNumber
             <|> try parseFloat
+            <|> try parseRatio
+--          <|> try parseComplex
 
 -- Parser 部品
 spaces :: Parser ()
@@ -126,6 +132,22 @@ parseFloat = do
   y <- many1 digit
   return $ Float (fst . head $ readFloat(x ++ "." ++ y))
 
+parseRatio :: Parser LispVal
+parseRatio = do
+  x <- many1 digit
+  char '/'
+  y <- many1 digit
+  return $ Ratio ((read x)%(read y))
+
+-- non-exhaustive の警告対策が思いつかないのでしばらく放置
+-- parseComplex :: Parser LispVal
+-- parseComplex = do
+--   x <- (try parseFloat <|> parseDigital1)
+--   char '+'
+--   y <- (try parseFloat <|> parseDigital1)
+--   char 'i'
+--   return $ Complex (toDouble x :+ toDouble y)
+
 
 -- Utility
 oct2dig :: (Eq a, Num a) => String -> a
@@ -141,3 +163,8 @@ bin2dig' :: Num a => a -> [Char] -> a
 bin2dig' digint "" = digint
 bin2dig' digint (x:xs) = let old = 2 * digint + (if x == '0' then 0 else 1) in
                          bin2dig' old xs
+
+-- non-exhaustive の警告対策が思いつかないのでしばらく放置
+-- toDouble :: LispVal -> Double
+-- toDouble (Float f) = f
+-- toDouble ( n) = fromIntegral n
