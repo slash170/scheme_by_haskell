@@ -26,11 +26,9 @@ instance Show LispVal where
 
 -- Main 処理
 main :: IO ()
-main = do
-  args <- getArgs
-  putStrLn (readExpr (args !! 0))
+main = getArgs >>= print . eval . readExpr . head
 
--- 評価
+-- 表示
 showVal :: LispVal -> String
 showVal (String contents) = "\"" ++ contents ++ "\""
 showVal (Atom name)       = name
@@ -44,14 +42,21 @@ showVal _ = "can't printing...orz"
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
 
+-- 評価
+readExpr :: String -> LispVal
+readExpr input = case parse parseExpr "lisp" input of
+                   Left err -> String $ "No match:" ++ show err
+                   Right val -> val
+
+eval :: LispVal -> LispVal
+eval val@(String _) = val
+eval val@(Number _) = val
+eval val@(Bool _)   = val
+eval (List [Atom "quote", val]) = val
+
 
 -- 構文解析
 -- Parser 本体
-readExpr :: String -> String
-readExpr input = case parse parseExpr "lisp" input of
-                   Left err -> "No match:" ++ show err
-                   Right val -> "Found:" ++ show val
-
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
             <|> parseString
