@@ -167,4 +167,4 @@ bin2dig' digint (x:xs) = let old = 2 * digint + (if x == '0' then 0 else 1) in
 -- non-exhaustive の警告対策が思いつかないのでしばらく放置
 -- toDouble :: LispVal -> Double
 -- toDouble (Float f) = f
--- toDouble ( n) = fromIntegral n
+-- toDouble (Number n) = fromIntegral n
