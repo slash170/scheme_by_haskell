@@ -4,18 +4,16 @@ module Main where
 
 import System.IO()
 import System.Environment
-import Control.Monad()
+import Control.Monad
 import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric
 import Data.Ratio
--- import Data.Complex
 
 data LispVal = Atom       String
              | List       [LispVal]
              | DottedList [LispVal] LispVal
              | Number     Integer
              | Float      Double
---           | Complex    (Complex Double)
              | Ratio      Rational
              | String     String
              | Bool       Bool
@@ -37,10 +35,14 @@ parseExpr = parseAtom
             <|> parseString
             <|> try parseCharacter
             <|> try parseBool
-            <|> try parseNumber
             <|> try parseFloat
             <|> try parseRatio
---          <|> try parseComplex
+            <|> try parseNumber
+            <|> try parseQuoted
+            <|> do char '('
+                   x <- try parseList <|> parseDottedList
+                   char ')'
+                   return x
 
 -- Parser 部品
 spaces :: Parser ()
@@ -58,6 +60,24 @@ escapedChars = do
              'r' -> '\r'
              't' -> '\t'
              _   -> x
+
+-- () List の Parser
+parseList :: Parser LispVal
+parseList = liftM List $ sepBy parseExpr spaces
+
+-- dot '.' 対の Parser
+parseDottedList :: Parser LispVal
+parseDottedList = do
+  hdToken <- endBy parseExpr spaces
+  tlToken <- char '.' >> spaces >> parseExpr
+  return $ DottedList hdToken tlToken
+
+-- SingleQuote の Parser
+parseQuoted :: Parser LispVal
+parseQuoted = do
+  char '\''
+  x <- parseExpr
+  return $ List [Atom "quote",x]
 
 parseAtom :: Parser LispVal
 parseAtom = do
@@ -96,11 +116,13 @@ parseNumber = do
   num <- parseDigital1 <|> parseDigital2 <|> parseHex <|> parseOct <|> parseBin
   return $ num
 
+-- reads を使用し、残った文字列があったらエラーにするよう変更すべき。
 parseDigital1 :: Parser LispVal
 parseDigital1 = do
   x <- many1 digit
   return $ Number $ read x
 
+-- reads を使用し、残った文字列があったらエラーにするよう変更すべき。
 parseDigital2 :: Parser LispVal
 parseDigital2 = do
   try $ string "#d"
@@ -139,17 +161,9 @@ parseRatio = do
   y <- many1 digit
   return $ Ratio ((read x)%(read y))
 
--- non-exhaustive の警告対策が思いつかないのでしばらく放置
--- parseComplex :: Parser LispVal
--- parseComplex = do
---   x <- (try parseFloat <|> parseDigital1)
---   char '+'
---   y <- (try parseFloat <|> parseDigital1)
---   char 'i'
---   return $ Complex (toDouble x :+ toDouble y)
-
 
 -- Utility
+-- reads での読み込み時、残った文字列があったらエラーにするよう変更すべき。
 oct2dig :: (Eq a, Num a) => String -> a
 oct2dig x = fst $ readOct x !! 0
 
@@ -163,8 +177,3 @@ bin2dig' :: Num a => a -> [Char] -> a
 bin2dig' digint "" = digint
 bin2dig' digint (x:xs) = let old = 2 * digint + (if x == '0' then 0 else 1) in
                          bin2dig' old xs
-
--- non-exhaustive の警告対策が思いつかないのでしばらく放置
--- toDouble :: LispVal -> Double
--- toDouble (Float f) = f
--- toDouble (Number n) = fromIntegral n
