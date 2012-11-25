@@ -9,6 +9,7 @@ import Text.ParserCombinators.Parsec hiding (spaces)
 import Numeric
 import Data.Ratio
 
+-- データ定義
 data LispVal = Atom       String
              | List       [LispVal]
              | DottedList [LispVal] LispVal
@@ -19,16 +20,37 @@ data LispVal = Atom       String
              | Bool       Bool
              | Character  Char
 
+instance Show LispVal where
+    show = showVal
+
+
+-- Main 処理
 main :: IO ()
 main = do
   args <- getArgs
   putStrLn (readExpr (args !! 0))
 
+-- 評価
+showVal :: LispVal -> String
+showVal (String contents) = "\"" ++ contents ++ "\""
+showVal (Atom name)       = name
+showVal (Number contents) = show contents
+showVal (Bool True)  = "#t"
+showVal (Bool False) = "#f"
+showVal (List contents) = "(" ++ unwordsList contents ++ ")"
+showVal (DottedList hdToken tlToken) = "(" ++ unwordsList hdToken ++ "." ++ showVal tlToken ++ ")"
+showVal _ = "can't printing...orz"
+
+unwordsList :: [LispVal] -> String
+unwordsList = unwords . map showVal
+
+
+-- 構文解析
 -- Parser 本体
 readExpr :: String -> String
 readExpr input = case parse parseExpr "lisp" input of
                    Left err -> "No match:" ++ show err
-                   Right val -> "Found value"
+                   Right val -> "Found:" ++ show val
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
