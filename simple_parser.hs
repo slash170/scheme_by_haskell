@@ -8,12 +8,14 @@ import Numeric
 import Control.Monad()
 import Text.ParserCombinators.Parsec hiding (spaces)
 
-data LispVal = Atom String
-             | List [LispVal]
+data LispVal = Atom       String
+             | List       [LispVal]
              | DottedList [LispVal] LispVal
-             | Number Integer
-             | String String
-             | Bool Bool
+             | Number     Integer
+             | Float      Double
+             | String     String
+             | Bool       Bool
+             | Character  Char
 
 main :: IO ()
 main = do
@@ -27,7 +29,12 @@ readExpr input = case parse parseExpr "lisp" input of
                    Right val -> "Found value"
 
 parseExpr :: Parser LispVal
-parseExpr = parseAtom <|> parseString <|> parseNumber <|> parseBool
+parseExpr = parseAtom
+            <|> parseString
+            <|> try parseCharacter
+            <|> try parseBool
+            <|> try parseNumber
+            <|> try parseFloat
 
 -- Parser 部品
 spaces :: Parser ()
@@ -46,6 +53,13 @@ escapedChars = do
              't' -> '\t'
              _   -> x
 
+parseAtom :: Parser LispVal
+parseAtom = do
+  first <- letter <|> symbol
+  rest  <- many (letter <|> digit <|> symbol)
+  let atom = first:rest
+  return $ Atom atom
+
 parseString :: Parser LispVal
 parseString = do
   char '"'
@@ -53,12 +67,15 @@ parseString = do
   char '"'
   return $ String x
 
-parseAtom :: Parser LispVal
-parseAtom = do
-  first <- letter <|> symbol
-  rest  <- many (letter <|> digit <|> symbol)
-  let atom = first:rest
-  return $ Atom atom
+parseCharacter :: Parser LispVal
+parseCharacter = do
+  try $ string "#\\"
+  value <- try (string "newline" <|> string "space")
+           <|> do { x <- anyChar; notFollowedBy alphaNum; return [x] }
+  return $ Character $ case value of
+                         "space"   -> ' '
+                         "newline" -> '\n'
+                         _         -> (value!!0)
 
 parseBool :: Parser LispVal
 parseBool = do
@@ -101,6 +118,14 @@ parseBin = do
   try $ string "#b"
   x <- many1 (oneOf "10")
   return $ Number $ bin2dig x
+
+parseFloat :: Parser LispVal
+parseFloat = do
+  x <- many1 digit
+  char '.'
+  y <- many1 digit
+  return $ Float (fst . head $ readFloat(x ++ "." ++ y))
+
 
 -- Utility
 oct2dig :: (Eq a, Num a) => String -> a
