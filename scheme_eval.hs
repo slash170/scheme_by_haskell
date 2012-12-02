@@ -31,13 +31,15 @@ main = getArgs >>= print . eval . readExpr . head
 -- 表示
 showVal :: LispVal -> String
 showVal (String contents) = "\"" ++ contents ++ "\""
+showVal (Character contents) = show contents
 showVal (Atom name)       = name
 showVal (Number contents) = show contents
+showVal (Float contents) = show contents
+showVal (Ratio contents) = show contents
 showVal (Bool True)  = "#t"
 showVal (Bool False) = "#f"
 showVal (List contents) = "(" ++ unwordsList contents ++ ")"
 showVal (DottedList hdToken tlToken) = "(" ++ unwordsList hdToken ++ "." ++ showVal tlToken ++ ")"
-showVal _ = "can't printing...orz"
 
 unwordsList :: [LispVal] -> String
 unwordsList = unwords . map showVal
@@ -50,7 +52,10 @@ readExpr input = case parse parseExpr "lisp" input of
 
 eval :: LispVal -> LispVal
 eval val@(String _) = val
+eval val@(Character _) = val
 eval val@(Number _) = val
+eval val@(Float _) = val
+eval val@(Ratio _) = val
 eval val@(Bool _)   = val
 eval (List [Atom "quote", val]) = val
 eval (List (Atom func : args)) = apply func $ map eval args
