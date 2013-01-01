@@ -93,7 +93,8 @@ eval (List [Atom "quote", val]) = return val
 eval (List (Atom func : args)) = mapM eval args >>= apply func
 eval badForm = throwError $ BadSpecialForm "Unrecognized special form" badForm
 
--- ($ args) の意味が分からん
+-- ($ args) の意味
+-- lookup func primitives の検索で取り出した演算を args に適用する。
 apply :: String -> [LispVal] -> ThrowsError LispVal
 apply func args = maybe (throwError $ NotFunction "Unrecognized primitive function args " func)
                   ($ args)
