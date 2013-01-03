@@ -2,7 +2,7 @@
 
 module Main where
 
-import System.IO()
+import System.IO
 import System.Environment
 import Control.Monad
 import Control.Monad.Error
@@ -43,8 +43,33 @@ instance Error LispError where
 main :: IO ()
 main = do
   args <- getArgs
-  evaled <- return $ liftM show $ readExpr (args!!0) >>= eval
-  putStrLn $ extractValue $ trapError evaled
+  case length args of
+    0 -> runRepl
+    1 -> evalAndPrint $ args !! 0
+    _ -> putStrLn "Program takes only 0 or 1 argument"
+
+-- REPL
+flushStr :: String -> IO ()
+flushStr str = putStr str >> hFlush stdout
+
+readPrompt :: String -> IO String
+readPrompt prompt = flushStr prompt >> getLine
+
+evalString :: String -> IO String
+evalString expr = return $ extractValue $ trapError (liftM show $ readExpr expr >>= eval)
+
+evalAndPrint :: String -> IO()
+evalAndPrint expr = evalString expr >>= putStrLn
+
+until_ :: Monad m => (a -> Bool) -> m a -> (a -> m()) -> m ()
+until_ predd prompt action = do
+  result <- prompt
+  if predd result
+     then return ()
+     else action result >> until_ predd prompt action
+
+runRepl :: IO ()
+runRepl = until_ (== "quit") (readPrompt "Lisp>>>") evalAndPrint
 
 -- 表示
 showVal :: LispVal -> String
@@ -368,3 +393,4 @@ bin2dig' :: Num a => a -> [Char] -> a
 bin2dig' digint "" = digint
 bin2dig' digint (x:xs) = let old = 2 * digint + (if x == '0' then 0 else 1) in
                          bin2dig' old xs
+
