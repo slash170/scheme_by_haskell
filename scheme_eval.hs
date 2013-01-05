@@ -55,6 +55,8 @@ flushStr str = putStr str >> hFlush stdout
 readPrompt :: String -> IO String
 readPrompt prompt = flushStr prompt >> getLine
 
+-- Either LispError LispVal -> Either err String -> String -> IO String
+-- 上記の順で型変換を実施
 evalString :: String -> IO String
 evalString expr = return $ extractValue $ trapError (liftM show $ readExpr expr >>= eval)
 
@@ -69,7 +71,7 @@ until_ predd prompt action = do
      else action result >> until_ predd prompt action
 
 runRepl :: IO ()
-runRepl = until_ (== "quit") (readPrompt "Lisp>>>") evalAndPrint
+runRepl = until_ (== "quit") (readPrompt "Lisp>>> ") evalAndPrint
 
 -- 表示
 showVal :: LispVal -> String
